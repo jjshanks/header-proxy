@@ -14,3 +14,12 @@ $ go run main.go --listen=0.0.0.0:3000 --forward=0.0.0.0:80 --header=foo=bar --h
 2019/10/17 20:39:55 Injecting headers map[fizz:buzz foo:bar]
 ```
 
+### Docker
+
+```
+$ docker pull jjshanks/header-proxy
+$ docker run --rm jjshanks/header-proxy --listen=0.0.0.0:3000 --forward=0.0.0.0:8080 --header=fizz=buzz --header="X-Forwarded-For=client, proxy1, proxy2"
+2019/10/20 18:36:18 Listening on 0.0.0.0:3000
+2019/10/20 18:36:18 Forwarding to 0.0.0.0:8080
+2019/10/20 18:36:18 Injecting headers map[X-Forwarded-For:client, proxy1, proxy2 fizz:buzz]
+```
