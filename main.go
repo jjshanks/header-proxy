@@ -4,8 +4,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -23,9 +23,9 @@ func main() {
 	checkAddr(*listenAddr, "listen")
 	checkAddr(*forwardAddr, "forward")
 
-	log.Printf("Listening on %s", *listenAddr)
-	log.Printf("Forwarding to %s", *forwardAddr)
-	log.Printf("Injecting headers %v", headers)
+	log.Infof("Listening on %s", *listenAddr)
+	log.Infof("Forwarding to %s", *forwardAddr)
+	log.Infof("Injecting headers %v", headers)
 
 	s := &http.Server{
 		Addr: *listenAddr,
