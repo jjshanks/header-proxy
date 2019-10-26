@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"os"
 	"strings"
@@ -27,11 +28,19 @@ func main() {
 	log.Infof("Forwarding to %s", *forwardAddr)
 	log.Infof("Injecting headers %v", headers)
 
+	forwardBaseUrl := &url.URL{
+		Scheme: "http",
+		Host:   *forwardAddr,
+		Path:   "/",
+	}
+	rp := httputil.NewSingleHostReverseProxy(forwardBaseUrl)
+
 	s := &http.Server{
 		Addr: *listenAddr,
 		Handler: &headerHandler{
 			forwardAddr:     *forwardAddr,
 			injectedHeaders: headers,
+			reverseProxy:    rp,
 		},
 	}
 
@@ -41,52 +50,14 @@ func main() {
 type headerHandler struct {
 	forwardAddr     string
 	injectedHeaders headerFlags
+	reverseProxy    *httputil.ReverseProxy
 }
 
 func (th *headerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	client := &http.Client{}
-	r.Host = th.forwardAddr
-	url := mapUrl(r)
 	for key, value := range th.injectedHeaders {
 		r.Header.Add(key, value)
 	}
-	nr := cloneRequest(r, url)
-	resp, err := client.Do(nr)
-	if err != nil {
-		errorResponse(w, err)
-		return
-	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		errorResponse(w, err)
-		return
-	}
-	w.Write([]byte(body))
-}
-
-func mapUrl(r *http.Request) *url.URL {
-	return &url.URL{
-		Scheme: "http",
-		Host:   "localhost",
-		Path:   r.RequestURI,
-	}
-}
-
-func cloneRequest(r *http.Request, url *url.URL) *http.Request {
-	return &http.Request{
-		Method:     r.Method,
-		URL:        url,
-		Header:     r.Header.Clone(),
-		Body:       r.Body,
-		Host:       "",
-		RemoteAddr: r.RemoteAddr,
-	}
-}
-
-func errorResponse(w http.ResponseWriter, err error) {
-	w.WriteHeader(500)
-	w.Write([]byte(fmt.Sprintf("Internal Error: %v", err)))
+	th.reverseProxy.ServeHTTP(w, r)
 }
 
 type headerFlags map[string]string
