@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	log "github.com/sirupsen/logrus"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httputil"
