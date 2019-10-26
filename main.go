@@ -13,7 +13,17 @@ import (
 	"strings"
 )
 
+const LOG_LEVEL = "LOG_LEVEL"
+
 func main() {
+	if os.Getenv(LOG_LEVEL) != "" {
+		logLevel, err := log.ParseLevel(os.Getenv(LOG_LEVEL))
+		if err != nil {
+			log.Warnf("Unable to parse LOG_LEVEL value using default: %v", err)
+		} else {
+			log.SetLevel(logLevel)
+		}
+	}
 	listenAddr := flag.String("listen", "0.0.0.0:80", "host:port to listen for oncoming requests")
 	forwardAddr := flag.String("forward", "127.0.0.1:3000", "host:port to forward modified requests to")
 	headers := make(headerFlags)
@@ -22,16 +32,16 @@ func main() {
 
 	checkAddr(*listenAddr, "listen")
 	checkAddr(*forwardAddr, "forward")
-
-	log.Infof("Listening on %s", *listenAddr)
-	log.Infof("Forwarding to %s", *forwardAddr)
-	log.Infof("Injecting headers %v", headers)
-
 	forwardBaseUrl := &url.URL{
 		Scheme: "http",
 		Host:   *forwardAddr,
 		Path:   "/",
 	}
+
+	log.Infof("Listening on %s", *listenAddr)
+	log.Infof("Forwarding to %s", forwardBaseUrl)
+	log.Infof("Injecting headers %v", headers)
+
 	rp := httputil.NewSingleHostReverseProxy(forwardBaseUrl)
 
 	s := &http.Server{
@@ -53,6 +63,7 @@ type headerHandler struct {
 }
 
 func (th *headerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	log.Debugf("Processing request %s", r.RequestURI)
 	for key, value := range th.injectedHeaders {
 		r.Header.Add(key, value)
 	}
